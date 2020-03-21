@@ -26,7 +26,7 @@ TEST_CASE("Compressed NULL cap encodes to zeroes", "[nullcap]") {
         CHECK(decompressed.address() == 0);
         CHECK_FIELD(decompressed, software_permissions, 0);
         CHECK_FIELD(decompressed, permissions, 0);
-        CHECK(decompressed.cr_pesbt_xored_for_mem == 0); // loaded pesbt xored with mask
+//        CHECK(decompressed.cr_pesbt_xored_for_mem == 0); // loaded pesbt xored with mask
         CHECK(decompressed.length() == CC128_NULL_LENGTH);
         CHECK(decompressed.top() == CC128_NULL_TOP);
         CHECK_FIELD(decompressed, type, CC128_OTYPE_UNSEALED);
@@ -68,7 +68,7 @@ TEST_CASE("Zeroes decode to NULL cap", "[nullcap]") {
     CHECK_FIELD(result, offset, 0);
     CHECK_FIELD(result, software_permissions, 0);
     CHECK_FIELD(result, permissions, 0);
-    CHECK(result.cr_pesbt_xored_for_mem ==  0); // loaded pesbt xored with mask
+    //CHECK(result.cr_pesbt_xored_for_mem ==  0); // loaded pesbt xored with mask
     CHECK_FIELD_RAW(result.length(), CC128_NULL_LENGTH);
     CHECK_FIELD(result, type, CC128_OTYPE_UNSEALED);
 

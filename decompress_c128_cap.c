@@ -79,29 +79,48 @@ static void dump_cap_fields(const cap_register_t* result) {
     fprintf(stderr, "\n");
 }
 
+static void dump_cap_fields_one_line(const cap_register_t* result) {
+    fprintf(stderr, "Permissions:0x%" PRIx32 ",", result->cr_perms); // TODO: decode perms
+    fprintf(stderr, "User Perms:0x%" PRIx32 ",", result->cr_uperms);
+    fprintf(stderr, "Base:0x%016" PRIx64 ",", result->cr_base);
+    fprintf(stderr, "Offset:0x%016" PRIx64 ",", result->_cr_cursor - result->cr_base);
+    fprintf(stderr, "Cursor:0x%016" PRIx64 ",", result->_cr_cursor);
+    cc128_length_t length = result->_cr_top - result->cr_base;
+    fprintf(stderr, "Length:0x%" PRIx64 "%016" PRIx64 "%s,",
+            (uint64_t)(length >> 64), (uint64_t)length,
+            length > UINT64_MAX ? " (greater than UINT64_MAX)": "");
+    cc128_length_t top_full = result->_cr_top;
+    fprintf(stderr, "Top:0x%" PRIx64 "%016" PRIx64 "%s,",
+            (uint64_t)(top_full >> 64), (uint64_t)top_full,
+            top_full > UINT64_MAX ? " (greater than UINT64_MAX)": "");
+    fprintf(stderr, "Sealed:%d,", cc128_is_cap_sealed(result) ? 1 : 0);
+    fprintf(stderr, "OType:0x%" PRIx32 "%s,", result->cr_otype, otype_suffix(result->cr_otype));
+    fprintf(stderr, "Flags:0x%" PRIx8 ",", result->cr_flags);
+    fprintf(stderr, "Reserved:0x%" PRIx8 "", result->cr_reserved);
+    fprintf(stderr, "\n");
+}
+
 int main(int argc, char** argv) {
-    fprintf(stderr, "CC128_NULL_XOR_MASK=0x%llx\n", (long long)CC128_NULL_XOR_MASK);
-    fprintf(stderr, "CC128_NULL_PESBT   =0x%llx\n", (long long)CC128_NULL_PESBT);
-    if (argc < 3) {
-        fprintf(stderr, "Usage: %s PESBT CURSOR\n", argv[0]);
-        return EXIT_FAILURE;
-    }
     errno = 0;
     char* end;
-    uint64_t pesbt = strtoull(argv[1], &end, 16);
-    if (errno != 0 || !end || *end != '\0') {
-        err(EX_DATAERR, "pesbt not a valid hex number: %s", argv[1]);
+
+    char * line = malloc(sizeof(char) * 50);
+    char buffer_hex1[20];
+    char buffer_hex2[20];
+    while(fgets(line, 50, stdin)){
+        sscanf(line, "%s %s", buffer_hex1, buffer_hex2);
+        uint64_t pesbt = strtoull(buffer_hex1, &end, 16);
+        if (errno != 0 || !end || *end != '\0') {
+            err(EX_DATAERR, "pesbt not a valid hex number: %s", argv[1]);
+        }
+        uint64_t cursor = strtoull(buffer_hex2, &end, 16);
+        if (errno != 0 || !end || *end != '\0') {
+            err(EX_DATAERR, "cursor not a valid hex number: %s", argv[2]);
+        }
+        cap_register_t result;
+        memset(&result, 0, sizeof(result));
+        decompress_128cap(pesbt, cursor, &result);
+        dump_cap_fields_one_line(&result);
     }
-    uint64_t cursor = strtoull(argv[2], &end, 16);
-    if (errno != 0 || !end || *end != '\0') {
-        err(EX_DATAERR, "cursor not a valid hex number: %s", argv[2]);
-    }
-    cap_register_t result;
-    memset(&result, 0, sizeof(result));
-    printf("Decompressing pesbt = %016" PRIx64 ", cursor = %016" PRIx64 "\n", pesbt, cursor);
-    decompress_128cap(pesbt, cursor, &result);
-    dump_cap_fields(&result);
-    uint64_t rt_pesbt = compress_128cap(&result);
-    printf("Re-compressed pesbt = %016" PRIx64 "%s\n", rt_pesbt, pesbt == rt_pesbt ? "" : " - WAS DESTRUCTIVE");
     return EXIT_SUCCESS;
 }
